@@ -1,0 +1,25 @@
+# Banned Strings — Example Template
+#
+# Copy this file to `.banned-strings` (which is .gitignored) and fill in
+# with any strings you want the pre-commit hook to block from public commits.
+# Use one entry per line. Blank lines and lines starting with # are ignored.
+# Matching is word-boundary regex (case-insensitive by default).
+#
+# Example categories:
+#
+# Your project names:
+# MyProject
+# MyApp
+#
+# People and entities you don't want to mention:
+# SomeCompany
+# SomePerson
+#
+# Industry jargon from your work:
+# DomainTerm
+# JargonWord
+#
+# ALLOW LIST: strings that are banned elsewhere but OK in specific files.
+# Format: "string | allowed_path1,allowed_path2"
+# Example:
+# Your Name | LICENSE,README.md,docs/CHEATSHEET.md
