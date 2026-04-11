@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Banned-strings pre-commit check
-# Reads .banned-strings (if present), uses word-boundary matching,
+# Reads .banned-strings (if present), uses fixed-string word-boundary matching,
 # supports path-scoped exceptions.
 #
 # Portable to bash 3.2 (macOS default) — no associative arrays.
@@ -48,6 +48,22 @@ else
 fi
 
 VIOLATIONS=0
+HITS_TMP="$(mktemp -t banned-strings-hits.XXXXXX)"
+trap 'rm -f "$HITS_TMP"' EXIT
+
+# Run a fixed-string, word-bounded grep and branch on exit code.
+# Arguments: $1 = pattern, $2 = file
+# Writes matches to $HITS_TMP.
+# Returns:
+#   0 = matches found
+#   1 = no matches
+#   2 = grep error (treated as violation by caller)
+run_grep() {
+    local pattern="$1"
+    local file="$2"
+    grep -Fwn -- "$pattern" "$file" > "$HITS_TMP" 2>/dev/null
+    return $?
+}
 
 # Strict ban check
 for ban in "${STRICT_BANS[@]:-}"; do
@@ -55,11 +71,22 @@ for ban in "${STRICT_BANS[@]:-}"; do
     while IFS= read -r file; do
         [ -z "$file" ] && continue
         [ -f "$file" ] || continue
-        if grep -qniE "\b${ban}\b" "$file" 2>/dev/null; then
+
+        set +e
+        run_grep "$ban" "$file"
+        grep_exit=$?
+        set -e
+
+        if [ "$grep_exit" -eq 0 ]; then
             echo "❌ Banned string found: \"$ban\""
-            while IFS= read -r hit; do
+            head -5 "$HITS_TMP" | while IFS= read -r hit; do
                 echo "   $file:$hit"
-            done < <(grep -niE "\b${ban}\b" "$file" 2>/dev/null | head -5)
+            done
+            VIOLATIONS=$((VIOLATIONS + 1))
+        elif [ "$grep_exit" -eq 1 ]; then
+            :
+        else
+            echo "⚠ grep error on $file while scanning for \"$ban\" (exit $grep_exit). Treating as violation." >&2
             VIOLATIONS=$((VIOLATIONS + 1))
         fi
     done <<< "$FILES"
@@ -71,20 +98,46 @@ i=0
 while [ "$i" -lt "$allow_count" ]; do
     key="${ALLOW_KEYS[$i]}"
     allowed_paths="${ALLOW_PATHS[$i]}"
-    allow_pattern="$(echo "$allowed_paths" | sed 's/,/\\|/g')"
+
+    # Split allowed_paths on comma into a literal-path array, trim whitespace
+    IFS=',' read -r -a allow_path_arr <<< "$allowed_paths"
+    trimmed_paths=()
+    for p in "${allow_path_arr[@]:-}"; do
+        trimmed="$(echo "$p" | xargs)"
+        [ -n "$trimmed" ] && trimmed_paths+=("$trimmed")
+    done
 
     while IFS= read -r file; do
         [ -z "$file" ] && continue
         [ -f "$file" ] || continue
-        # Skip if this file is in the allowed list
-        if echo "$file" | grep -qE "^(${allow_pattern})$"; then
+
+        # Skip this file if it exactly matches an allowed path (literal compare)
+        is_allowed=0
+        for allowed in "${trimmed_paths[@]:-}"; do
+            if [ "$file" = "$allowed" ]; then
+                is_allowed=1
+                break
+            fi
+        done
+        if [ "$is_allowed" -eq 1 ]; then
             continue
         fi
-        if grep -qniE "\b${key}\b" "$file" 2>/dev/null; then
+
+        set +e
+        run_grep "$key" "$file"
+        grep_exit=$?
+        set -e
+
+        if [ "$grep_exit" -eq 0 ]; then
             echo "❌ Allow-list string \"$key\" found outside permitted paths: $file"
-            while IFS= read -r hit; do
+            head -3 "$HITS_TMP" | while IFS= read -r hit; do
                 echo "   $file:$hit"
-            done < <(grep -niE "\b${key}\b" "$file" 2>/dev/null | head -3)
+            done
+            VIOLATIONS=$((VIOLATIONS + 1))
+        elif [ "$grep_exit" -eq 1 ]; then
+            :
+        else
+            echo "⚠ grep error on $file while scanning for \"$key\" (exit $grep_exit). Treating as violation." >&2
             VIOLATIONS=$((VIOLATIONS + 1))
         fi
     done <<< "$FILES"

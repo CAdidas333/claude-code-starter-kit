@@ -3,7 +3,14 @@
 # Copy this file to `.banned-strings` (which is .gitignored) and fill in
 # with any strings you want the pre-commit hook to block from public commits.
 # Use one entry per line. Blank lines and lines starting with # are ignored.
-# Matching is word-boundary regex (case-insensitive by default).
+#
+# Matching semantics:
+#   - Fixed-string (literal) match, case-sensitive, with whole-word boundaries.
+#   - Any character is supported in a banned string — no regex escaping needed.
+#     You can safely list things like  C++  or  foo(bar  or  foo.bar  and they
+#     are compared as literal text, not as regex patterns.
+#   - Word boundaries mean the banned string only matches when surrounded by
+#     non-word characters. "will" will NOT match inside "willpower".
 #
 # Example categories:
 #
@@ -21,5 +28,11 @@
 #
 # ALLOW LIST: strings that are banned elsewhere but OK in specific files.
 # Format: "string | allowed_path1,allowed_path2"
+#
+# Paths in the allow-list are compared LITERALLY — exact string match against
+# the file path as git reports it (relative to the repo root). No regex, no
+# globs, no wildcards. If you want to allow the string in both README.md and
+# LICENSE, list them both explicitly, separated by commas.
+#
 # Example:
 # Your Name | LICENSE,README.md,docs/CHEATSHEET.md
