@@ -1,0 +1,15 @@
+{
+  "_comment_": "Claude Code Starter Kit — MCP server wiring. Step 07 of the finisher merges this into ~/.mcp.json without clobbering your existing entries.",
+  "mcpServers": {
+    "lean-ctx": {
+      "command": "lean-ctx",
+      "args": ["mcp"],
+      "_note_": "Assumes lean-ctx binary is on PATH. Install instructions: see docs/INSTALL.md. If you installed via Homebrew tap, the tap name is set by the installer."
+    },
+    "armory": {
+      "command": "node",
+      "args": ["~/.claude-starter-kit/mcp-servers/armory/dist/index.js"],
+      "_note_": "The kit vendors the Armory MCP server source at mcp-servers/armory/ and the finisher builds it during install."
+    }
+  }
+}
