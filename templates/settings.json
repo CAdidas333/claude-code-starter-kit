@@ -1,0 +1,75 @@
+{
+  "_comment_": "Claude Code Starter Kit — settings template. Step 06 of the finisher MERGES this into ~/.claude/settings.json without overwriting your existing preferences. Scalar conflicts: user wins. Arrays (permissions.allow, permissions.deny): union. Hooks: merge by event. enabledPlugins: shallow merge, user wins on conflicts.",
+  "cleanupPeriodDays": 365,
+  "effortLevel": "high",
+  "voiceEnabled": true,
+  "autoCompactWindow": 750000,
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(python3 *)",
+      "Bash(python *)",
+      "Bash(pip3 install *)",
+      "Bash(node *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(ls *)",
+      "Bash(which *)",
+      "Bash(* --version)",
+      "Bash(unzip *)",
+      "Read",
+      "Edit",
+      "Write"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Read(./.env*)",
+      "Read(./secrets/**)",
+      "Edit(./.env*)"
+    ],
+    "defaultMode": "auto"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/overwatch-session-start.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/overwatch-context-guard.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "You are a code reviewer. Review the code change that was just made (available in $ARGUMENTS). Check for: (1) security vulnerabilities (injection, XSS, exposed secrets, SQL injection), (2) obvious bugs (null refs, off-by-ones, race conditions), (3) missing error handling at system boundaries. Only report if you find ACTUAL problems. Be concise — one line per issue with the file path. If the change looks fine or is not code (markdown, config, docs), respond with nothing. Do NOT flag style preferences or minor suggestions.",
+            "timeout": 30,
+            "model": "claude-haiku-4-5-20251001",
+            "statusMessage": "Code review..."
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
+  }
+}

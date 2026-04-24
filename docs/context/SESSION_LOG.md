@@ -1,5 +1,5 @@
 ---
-updated: 2026-04-10
+updated: 2026-04-11
 tags: [session-log]
 ---
 
@@ -90,3 +90,81 @@ tags: [session-log]
   verification gates, and the pre-publish review checkpoint
 - Hand the implementation plan to the maintainer for review
 - Begin Phase 1 build (infrastructure layer) only after plan approval
+
+---
+
+## 2026-04-11 — Session 2: Full Build via Subagent-Driven Development
+
+**Duration:** ~one extended session, late night into early morning
+**Branch:** `feat/v1-build` (created from `main`)
+**Outcome:** 12 of 16 phases complete. Kit is structurally finished and verified end-to-end on Mac.
+
+### What happened
+
+Executed the v1 implementation plan via the `superpowers:subagent-driven-development` skill. Each phase dispatched fresh subagents per implementation task with separate spec-compliance and code-quality reviewers. When the bundled approach was clearly safer and more efficient (lots of small files following the same pattern), phases were combined into one or two dispatches with verification gates. Smaller content tasks (Phase 4 brain templates, Phase 9 settings/mcp templates, Phase 12 Armory seeds, Phase 13 e2e test) were done directly without subagent overhead.
+
+### Phases completed
+
+| Phase | Commit | Notes |
+|---|---|---|
+| 1 — Sanitization tooling | `1b0b2b0` + `69fb395` | Banned-strings hook with word-boundary fixed-string matching. Initial commit had three critical fail-open bugs (regex injection, broken allow-list, swallowed exit codes). Two-stage review caught all three; fix commit verified via 9 independent test cases including `C++`, `foo(bar`, `foo.bar`/`fooXbar`, `-flag-name`, and word-boundary checks. |
+| 2 — OS installers | `b748fce` + `3a84c7f` | `setup.sh` (bash 3.2 portable, Semgrep CWE-95 fix on `curl|bash`) and `setup.ps1` (Invoke-Native helper, dual PATH refresh, winget non-interactive flags). Both syntactically valid; Windows live-test deferred to Phase 13b. |
+| 3 — Cross-platform finisher | `d069603` + `4de09eb` + `ba544f6` | Scaffold (orchestrator + 3 lib modules) plus 10 step modules across two bundles. `MODULE_NOT_FOUND` discrimination in the loader. `fs-util.js` helper for path-traversal-safe composition (centralized to satisfy Semgrep). All 9 Step 06 merge scenarios pass including algebraic idempotence. |
+| 4 — Brain templates | `aa234b2` | 16 template files written directly (Dashboard, Feedback/*, Decisions/Features/Launch/IP READMEs, Ideas/_Inbox, Templates/* x3, Armory README+Focus+Index, root CLAUDE.md). All clean of banned strings on first pass. |
+| 5 — Skill sanitization | `7e51c64` | The monster phase. 11 skills sanitized with 65+ scrubs total. /ingest got the heaviest rewrite (-109 lines, stripped iMessage Python block + hardcoded phone). All skills degrade gracefully when optional infra (Gmail MCP, iMessage script, macOS-specific paths) isn't present. Zero needs-further-work items. |
+| 6 — `/welcome` skill | `353270c` | New skill, 551 lines. Three paths (specific projects / exploring / I-don't-know-yet). 4 working-style calibration questions with explicit answer-mapping tables. Incremental file writes (partial progress saved on interruption). Re-run menu. Marker file lifecycle. |
+| 7 — Agents + hooks | `94477dc` | context-updater + brain-updater agents scrubbed. overwatch-session-start.sh rewritten — added `.welcome-pending` check (was missing from original), removed entire Nerve Center inbox-polling block (Comms out of kit scope), replaced project case block with generic directory walk. overwatch-context-guard.sh same generic walk pattern. New code-reviewer-prompt.md standalone file. |
+| 8 — Armory MCP vendoring | `337417f` | Vendored sanitized copy of CAdidas333/Armory MCP server. 15 content scrubs in src/index.ts and src/tools.ts (project enums, hardcoded paths, phone number, function/parameter names de-personalized). **2 pre-existing upstream security vulnerabilities fixed** during the vendoring (path traversal in getCheatsheet, command injection in sendMessage). Build verified end-to-end. |
+| 9 — Settings template | `256ece5` (combined with Phase 12) | templates/settings.json scrubbed from live settings. Removed personal plugins, removed skipDangerousModePermissionPrompt, kept generic-useful settings (cleanupPeriodDays, effortLevel, voiceEnabled, autoCompactWindow). Hooks wired to ~/.claude/hooks/*. Code reviewer PostToolUse hook with Haiku model. Plus templates/mcp.json with lean-ctx + Armory wiring. |
+| 10 — Documentation | `2cd33f5` | All 8 docs in one bundled dispatch: README (full replacement), INSTALL, FIRST-SESSION, CHEATSHEET, WORKFLOWS, CLI-REFERENCE (skeleton with `[VERIFIED]` for /voice//rc//fast and `[UNVERIFIED]` markers for the rest), WHAT-IS-THIS, UPDATING. 2,809 lines total, all clean of banned strings on first pass. |
+| 12 — Armory seed notes | `256ece5` (combined with Phase 9) | Three generic starter notes: plan-mode-first, context-forty-percent-rule, vertical-slices. Furnished-apartment feel for Day 1 Armory. |
+| 13 — End-to-end test (Mac) | n/a (verification only) | Ran the finisher in a clean scratch HOME with the now-complete kit content. All 10 steps executed successfully — 20 directories created, 15 brain templates copied, 12 skills installed, 2 agents installed, 3 hooks installed (2 chmodded), settings.json written, lean-ctx detected on PATH, **Armory MCP copied + npm install + npm run build successful**, .mcp.json wired, brain git initialized at commit 17b142f, welcome marker written, verify reported "Everything found: yes". Scratch cleaned up. |
+| Helper scripts | `30059e8` | scripts/update.sh (re-runs the finisher) and scripts/verify-install.sh (post-install sanity check, CI-friendly exit codes). Both bash 3.2 portable. |
+
+### Phases remaining (Chris-blocked)
+
+- **11 — Live `/help` command verification.** Needs Chris's running Claude Code session to verify each documented command and flip CLI-REFERENCE.md `[UNVERIFIED]` markers to `[VERIFIED]`.
+- **13b — Windows e2e test.** Needs actual Windows hardware — the intended alpha tester runs Windows.
+- **14 — Pre-publish sanitization review.** Hard stop. Chris reviews every scrubbed file before anything merges to main.
+- **15 — Publish.** `feat/v1-build` → `main` merge, push to origin/main, send the Kevin handoff text.
+
+### Subagent dispatch count (this session)
+
+Roughly 18 subagent dispatches across the build phases. Each was implementer + spec reviewer + code quality reviewer (or combined where the surface was small). The dispatch pattern absorbed the heavy file reads, scratch tests, and bash command output into subagent contexts so the main thread budget stayed manageable.
+
+### Branch state at end of session
+
+```
+30059e8 Add update.sh and verify-install.sh helper scripts
+7e51c64 Phase 5: sanitize and import 11 custom skills
+2cd33f5 Phase 10: full documentation set (8 files)
+337417f Phase 8: vendor Armory MCP server (sanitized)
+94477dc Phase 7: sanitize agents + hooks, add code reviewer prompt
+256ece5 Phase 9+12: settings template, mcp.json template, 3 Armory seed notes
+353270c Phase 6: write /welcome onboarding skill
+aa234b2 Phase 4: brain templates (16 files)
+ba544f6 Phase 3 Bundle B: finisher steps 06-10
+4de09eb Phase 3 Bundle A: finisher steps 01-05
+d069603 Scaffold cross-platform finisher with step-based architecture
+3a84c7f Add Windows setup.ps1
+b748fce Add Mac setup.sh
+81849c6 Add git hook installer script
+69fb395 Fix critical fail-open bugs in banned-strings hook
+1b0b2b0 Add banned-strings pre-commit hook with word-boundary matching
+06f44f2 Add v1 implementation plan
+24d5b65 Initial commit — design phase, public stub
+```
+
+16 build commits + 2 design-phase commits = 18 total on `feat/v1-build`. 83 files, ~14,000 LOC.
+
+### Two cosmetic test commits squashed at session end
+
+The Phase 1 work originally produced two test commits (`d43cd42` test: verify hook fires; `cbfc0b7` test: remove verification file) that added and immediately removed a `test_commit.txt` file. These were noise from verifying the pre-commit hook actually fires. Squashed via `git rebase --onto 69fb395 cbfc0b7 feat/v1-build` at session end. Net file content unchanged; commit history is clean for Phase 15 merge.
+
+### Next session
+
+- Chris reviews the kit on `feat/v1-build`
+- Optional: run `./scripts/verify-install.sh` against current install for sanity
+- Optional: open a fresh Claude session and walk through `/help` to fill in CLI-REFERENCE.md (Phase 11)
+- Phase 14 pre-publish review with Chris's eyes on every scrubbed file
+- Phase 15 merge to main + push + send Kevin

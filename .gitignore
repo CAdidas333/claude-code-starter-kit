@@ -39,3 +39,7 @@ yarn-error.log*
 # Build output (kit installer will generate these, ignore until shipped)
 dist/
 build/
+
+# Maintainer's private banned-strings list (not committed)
+.banned-strings
+Status_Report_*.html
