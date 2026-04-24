@@ -42,3 +42,4 @@ build/
 
 # Maintainer's private banned-strings list (not committed)
 .banned-strings
+Status_Report_*.html
