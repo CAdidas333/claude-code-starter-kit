@@ -29,7 +29,6 @@ const { joinUnder, parentDir } = require('../fs-util');
 // these MCPs — they can be installed manually later — and we do not want
 // a transient npm registry error to break the finisher.
 
-const LEAN_CTX_DEFAULT_PACKAGE = '@lean-ctx/cli'; // best-guess; Phase 13 verifies
 const INSTALL_ROOT_REL = '.claude-starter-kit/mcp-servers';
 
 // Strict allow-list for npm package names we will shell out to install.
@@ -113,12 +112,78 @@ function writeMcpConfig(config) {
   fs.writeFileSync(paths.MCP_CONFIG, `${JSON.stringify(config, null, 2)}\n`);
 }
 
+// Pick the right installer for lean-ctx based on platform + what's on PATH.
+// Returns: { kind: 'brew'|'scoop'|'winget'|'manual', cmd: string[]|null, message: string }
+function pickLeanCtxInstaller({ platform, has }) {
+  if (platform === 'darwin') {
+    if (has.brew) {
+      return {
+        kind: 'brew',
+        cmd: ['brew', 'install', 'lean-ctx'],
+        message: 'detected Homebrew on macOS',
+      };
+    }
+    return {
+      kind: 'manual',
+      cmd: null,
+      message: 'Homebrew not found on macOS — install brew first, then re-run',
+    };
+  }
+  if (platform === 'win32') {
+    if (has.scoop) {
+      return {
+        kind: 'scoop',
+        cmd: ['scoop', 'install', 'lean-ctx'],
+        message: 'detected scoop on Windows',
+      };
+    }
+    if (has.winget) {
+      return {
+        kind: 'winget',
+        cmd: ['winget', 'install', '--id', 'lean-ctx.lean-ctx', '-e', '--silent', '--accept-source-agreements', '--accept-package-agreements'],
+        message: 'detected winget on Windows',
+      };
+    }
+    return {
+      kind: 'manual',
+      cmd: null,
+      message: 'neither scoop nor winget found — install one, then re-run',
+    };
+  }
+  return {
+    kind: 'manual',
+    cmd: null,
+    message: `no automatic installer for platform: ${platform}`,
+  };
+}
+
+function hasOnPath(binary) {
+  const pathEnv = process.env.PATH || '';
+  if (!pathEnv) return false;
+  const isWindows = process.platform === 'win32';
+  const sep = isWindows ? ';' : ':';
+  const exts = isWindows
+    ? (process.env.PATHEXT || '.EXE;.CMD;.BAT').split(';')
+    : [''];
+  for (const dir of pathEnv.split(sep)) {
+    if (!dir) continue;
+    for (const ext of exts) {
+      const candidate = `${dir}/${binary}${ext}`;
+      try {
+        const stat = fs.statSync(candidate);
+        if (stat.isFile()) return true;
+      } catch {
+        // try the next candidate
+      }
+    }
+  }
+  return false;
+}
+
 // Install lean-ctx. Returns a descriptor { present, entry, action } where
 // present=true means the binary is usable (either pre-existing or newly
 // installed) and entry is the object to splice into ~/.mcp.json.
 function installLeanCtx() {
-  // Already on PATH? Nothing to install — we still want to register it
-  // in .mcp.json if it's not there yet.
   if (hasLeanCtxBinary()) {
     log.ok('lean-ctx already on PATH');
     return {
@@ -128,37 +193,59 @@ function installLeanCtx() {
     };
   }
 
-  const packageName = process.env.LEAN_CTX_PACKAGE || LEAN_CTX_DEFAULT_PACKAGE;
-  if (!isValidNpmPackageName(packageName)) {
-    log.warn(`Refusing to install lean-ctx: invalid package name "${packageName}"`);
-    log.warn('Set LEAN_CTX_PACKAGE to a valid npm package name and re-run.');
-    return { present: false, action: 'failed', entry: null };
+  // Honor explicit override first (advanced users on weird stacks).
+  if (process.env.LEAN_CTX_PACKAGE) {
+    const packageName = process.env.LEAN_CTX_PACKAGE;
+    if (!isValidNpmPackageName(packageName)) {
+      log.warn(`Refusing to install lean-ctx: invalid LEAN_CTX_PACKAGE "${packageName}"`);
+      return { present: false, action: 'failed', entry: null };
+    }
+    log.step(`Installing lean-ctx via npm (override): ${packageName}`);
+    try {
+      runNpm(['install', '-g', packageName], { stdio: 'pipe' });
+    } catch (err) {
+      log.warn(`lean-ctx npm install failed: ${err.message.split('\n')[0]}`);
+      return { present: false, action: 'failed', entry: null };
+    }
+    if (!hasLeanCtxBinary()) {
+      log.warn('npm install finished but lean-ctx is still not on PATH');
+      return { present: false, action: 'failed', entry: null };
+    }
+    log.ok(`lean-ctx installed via npm (${packageName})`);
+    return { present: true, action: 'installed', entry: { command: 'lean-ctx', args: ['mcp'] } };
   }
 
-  log.step(`lean-ctx not found on PATH; attempting npm install -g ${packageName}`);
-  log.warn('(the lean-ctx install vector is not yet finalized — if this');
-  log.warn(' fails, install lean-ctx manually and re-run the finisher)');
+  // Normal path: detect platform-appropriate installer.
+  const has = {
+    brew: hasOnPath('brew'),
+    scoop: hasOnPath('scoop'),
+    winget: hasOnPath('winget'),
+  };
+  const choice = pickLeanCtxInstaller({ platform: process.platform, has });
 
+  if (choice.kind === 'manual') {
+    log.warn(`lean-ctx: ${choice.message}`);
+    log.warn('You can install lean-ctx later. The kit still works without it.');
+    log.warn('See: https://github.com/lean-ctx/lean-ctx');
+    return { present: false, action: 'skipped-manual', entry: null };
+  }
+
+  log.step(`Installing lean-ctx (${choice.message})`);
   try {
-    // Literal executable + array args = no shell, no injection.
-    runNpm(['install', '-g', packageName], { stdio: 'pipe' });
+    execFileSync(choice.cmd[0], choice.cmd.slice(1), { stdio: 'pipe' });
   } catch (err) {
-    log.warn(`lean-ctx install via npm failed: ${err.message.split('\n')[0]}`);
-    log.warn(`You can set LEAN_CTX_PACKAGE=<name> and re-run, or install manually.`);
+    log.warn(`lean-ctx ${choice.kind} install failed: ${err.message.split('\n')[0]}`);
+    log.warn('You can install lean-ctx later. The kit still works without it.');
     return { present: false, action: 'failed', entry: null };
   }
 
   if (!hasLeanCtxBinary()) {
-    log.warn('lean-ctx npm install completed but binary is still not on PATH');
+    log.warn(`lean-ctx ${choice.kind} install reported success but binary is still not on PATH`);
     return { present: false, action: 'failed', entry: null };
   }
 
-  log.ok(`lean-ctx installed via npm (${packageName})`);
-  return {
-    present: true,
-    action: 'installed',
-    entry: { command: 'lean-ctx', args: ['mcp'] },
-  };
+  log.ok(`lean-ctx installed (${choice.kind})`);
+  return { present: true, action: 'installed', entry: { command: 'lean-ctx', args: ['mcp'] } };
 }
 
 // Recursive directory copy. Node 16.7+ has fs.cpSync; fall back to a
@@ -294,3 +381,5 @@ module.exports = {
     }
   },
 };
+
+module.exports._internal = { pickLeanCtxInstaller };
