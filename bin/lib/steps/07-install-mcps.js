@@ -51,7 +51,13 @@ const IS_WINDOWS = process.platform === 'win32';
 // metacharacter interpretation.
 function runNpm(args, opts) {
   if (IS_WINDOWS) {
-    return execFileSync('npm.cmd', args, opts);
+    // npm on Windows is a .cmd shim. Since Node 20.12 / 18.20 (CVE-2024-27980),
+    // spawning a .cmd via execFileSync WITHOUT a shell throws EINVAL — so Windows
+    // requires shell:true. The command name is a fixed literal and every arg is a
+    // kit-controlled literal ('install', 'run', 'build') with no untrusted input,
+    // so there is no injection surface despite the shell. (macOS/Linux npm is a
+    // real executable and still runs shell-free below.)
+    return execFileSync('npm.cmd', args, { ...opts, shell: true });
   }
   return execFileSync('npm', args, opts);
 }
