@@ -145,6 +145,23 @@ if [ "${#MISSING[@]}" -gt 0 ]; then
   fi
 fi
 
+# PATH self-heal: if an install just changed PATH and claude still isn't visible
+# in this shell, re-exec in a fresh login shell so the rest of setup sees it.
+# Guarded against infinite relaunch by KIT_SETUP_RELAUNCHED.
+if ! command -v claude >/dev/null 2>&1; then
+  if [ "${KIT_SETUP_RELAUNCHED:-0}" = "1" ]; then
+    CURRENT_STEP="path self-heal"; CURRENT_CMD="re-exec fresh login shell"
+    echo -e "${RED}claude is still not on PATH after a fresh-shell relaunch.${NC}" >&2
+    echo "Close this terminal, open a new one, and re-run ./setup.sh." >&2
+    exit 1
+  fi
+  echo ""
+  echo "Re-launching setup in a fresh shell with refreshed PATH..."
+  echo ""
+  export KIT_SETUP_RELAUNCHED=1
+  exec "$SHELL" -l -c "\"$SCRIPT_DIR/setup.sh\""
+fi
+
 echo -e "${GREEN}All prerequisites present.${NC}"
 echo ""
 

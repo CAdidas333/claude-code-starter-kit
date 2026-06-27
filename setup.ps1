@@ -187,11 +187,24 @@ if ($Missing.Count -gt 0) {
     }
 
     if (-not (Test-Command "claude")) {
+        if ($env:KIT_SETUP_RELAUNCHED -eq "1") {
+            # Already relaunched once in a fresh shell and claude is still invisible.
+            Write-Host ""
+            Write-Host "Claude is still not on PATH after a fresh-shell relaunch." -ForegroundColor Red
+            Write-Host "Close this PowerShell window, open a new one, and re-run setup.ps1."
+            Write-Host "(npm global binaries live in %AppData%\npm, which is added to PATH for new shells.)"
+            Write-ErrorReportAndExit -ExitCode 1 -Stderr "claude not on PATH after PowerShell relaunch"
+        }
         Write-Host ""
-        Write-Host "Claude Code was installed via npm, but 'claude' is not on PATH." -ForegroundColor Red
-        Write-Host "Close this PowerShell window, open a new one, and re-run setup.ps1."
-        Write-Host "(npm global binaries live in %AppData%\npm, which is added to PATH for new shells.)"
-        exit 1
+        Write-Host "Claude was installed but isn't on PATH yet in this shell." -ForegroundColor Yellow
+        Write-Host "Re-launching setup in a fresh PowerShell with refreshed PATH..."
+        Write-Host ""
+        # Spawn a child PowerShell that re-runs this script; the child inherits the
+        # latest registry PATH (incl. %AppData%\npm), so claude becomes visible.
+        $env:KIT_SETUP_RELAUNCHED = "1"
+        $childScript = Join-Path $ScriptDir "setup.ps1"
+        & powershell -NoProfile -ExecutionPolicy Bypass -File $childScript
+        exit $LASTEXITCODE
     }
 }
 
