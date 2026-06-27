@@ -68,9 +68,21 @@ const KIT_FILES = {
 
   // Armory seed notes -> ~/Projects/_brain/Armory/Notes/
   armorySeeds: [
-    'armory-seeds/plan-mode-first.md',
-    'armory-seeds/context-forty-percent-rule.md',
-    'armory-seeds/vertical-slices.md',
+    'armory-seeds/2026-04-10_context-forty-percent-rule.md',
+    'armory-seeds/2026-04-10_plan-mode-first.md',
+    'armory-seeds/2026-04-10_vertical-slices.md',
+    'armory-seeds/adhd-prompts-kit.md',
+    'armory-seeds/boris-cherny-claude-md.md',
+    'armory-seeds/feature-completion-subtractive-pass.md',
+    'armory-seeds/idempotency-keys.md',
+    'armory-seeds/jsonl-transcript-debugging.md',
+    'armory-seeds/recoverable-delete-safety-net.md',
+    'armory-seeds/rewind-discipline.md',
+  ],
+
+  // Armory cheatsheets -> ~/Projects/_brain/Armory/Cheatsheets/
+  armoryCheatsheets: [
+    'templates/System-Manifest.md',
   ],
 };
 
