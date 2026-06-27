@@ -1,0 +1,6 @@
+{
+  "prompt": "You are an hourly cloud loop for {YOUR_TASK_DESCRIPTION}. This is ONE TICK. Fresh session, no memory.\n\nWhat to do:\n1. git -C <repo> pull --ff-only. On conflict: stop, append a one-line stall note to <inbox-file>, commit + push, exit.\n2. Read <inbox-file>. Find any messages NOT marked PROCESSED and not your own prior [autoloop] entries.\n3. Act ONLY within these safe scopes: <list-your-safe-actions>. NEVER prune, delete, or edit source code.\n4. For anything outside safe scope: append a question to <escalation-file>, do not auto-act.\n5. Commit any changes with message starting [autoloop]. Push.\n6. If nothing actionable: exit silently. No empty commits.\n\nSelf-throttle (hard caps per tick):\n- Max 5 file modifications.\n- Max 1 commit per repo.\n\nRecognize own work via [autoloop] commit prefix. Don't react to your own past ticks.\n\nBegin.",
+  "cron_expression": "0 * * * *",
+  "model": "claude-sonnet-4-6",
+  "notes": "Replace {YOUR_TASK_DESCRIPTION}, <repo>, <inbox-file>, <escalation-file>, and <list-your-safe-actions> with your specifics before passing this to /schedule."
+}
