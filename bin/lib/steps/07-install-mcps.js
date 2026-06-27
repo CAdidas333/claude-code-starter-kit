@@ -331,6 +331,61 @@ function installArmoryMcp(kitRoot) {
   };
 }
 
+function installCouncilMcp(kitRoot) {
+  const src = joinUnder(kitRoot, 'mcp-servers/council');
+  if (!fs.existsSync(src)) {
+    log.warn('Council MCP source not vendored yet — skipping');
+    return { present: false, action: 'skipped', entry: null };
+  }
+
+  const installBase = joinUnder(paths.HOME, INSTALL_ROOT_REL);
+  const dst = joinUnder(installBase, 'council');
+  const distEntry = `${dst}/dist/index.js`;
+
+  log.step(`Copying Council MCP to ${dst}`);
+  fs.mkdirSync(installBase, { recursive: true });
+  copyDirRecursive(src, dst);
+
+  try {
+    log.step('Running npm install in Council MCP copy');
+    runNpm(['install'], { cwd: dst, stdio: 'pipe' });
+  } catch (err) {
+    log.warn(`council mcp: npm install failed: ${err.message.split('\n')[0]}`);
+    return { present: false, action: 'failed', entry: null };
+  }
+
+  let hasBuildScript = false;
+  try {
+    const pkg = JSON.parse(fs.readFileSync(`${dst}/package.json`, 'utf8'));
+    hasBuildScript = Boolean(pkg.scripts && pkg.scripts.build);
+  } catch {}
+
+  if (hasBuildScript) {
+    try {
+      log.step('Running npm run build in Council MCP copy');
+      runNpm(['run', 'build'], { cwd: dst, stdio: 'pipe' });
+    } catch (err) {
+      log.warn(`council mcp: npm run build failed: ${err.message.split('\n')[0]}`);
+      return { present: false, action: 'failed', entry: null };
+    }
+  }
+
+  if (!fs.existsSync(distEntry)) {
+    log.warn(`council mcp: expected entry point missing: ${distEntry}`);
+    return { present: false, action: 'failed', entry: null };
+  }
+
+  log.ok(`Council MCP built at ${dst}`);
+  return {
+    present: true,
+    action: 'installed',
+    entry: {
+      command: 'node',
+      args: ['--no-deprecation', distEntry],
+    },
+  };
+}
+
 function upsertMcpEntry(config, name, entry) {
   if (!config.mcpServers[name]) {
     config.mcpServers[name] = entry;
@@ -360,6 +415,7 @@ module.exports = {
 
     const leanCtx = installLeanCtx();
     const armory = installArmoryMcp(kitRoot);
+    const council = installCouncilMcp(kitRoot);
 
     let changed = false;
     if (leanCtx.present && leanCtx.entry) {
@@ -370,6 +426,11 @@ module.exports = {
     if (armory.present && armory.entry) {
       const result = upsertMcpEntry(config, 'armory', armory.entry);
       log.ok(`.mcp.json armory: ${result}`);
+      if (result === 'added') changed = true;
+    }
+    if (council.present && council.entry) {
+      const result = upsertMcpEntry(config, 'council', council.entry);
+      log.ok(`.mcp.json council: ${result}`);
       if (result === 'added') changed = true;
     }
 
