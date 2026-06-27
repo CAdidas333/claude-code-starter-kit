@@ -125,7 +125,10 @@ function pickLeanCtxInstaller({ platform, has }) {
     if (has.brew) {
       return {
         kind: 'brew',
-        cmd: ['brew', 'install', 'lean-ctx'],
+        // Fully-qualified tap path: lean-ctx is not in homebrew-core, it ships
+        // via the yvgude/lean-ctx tap. Passing the full formula path makes brew
+        // auto-tap it; bare `brew install lean-ctx` fails with "No available formula".
+        cmd: ['brew', 'install', 'yvgude/lean-ctx/lean-ctx'],
         message: 'detected Homebrew on macOS',
       };
     }

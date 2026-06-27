@@ -8,7 +8,7 @@ test('lean-ctx detection picks brew on Mac when present', () => {
     has: { brew: true, scoop: false, winget: false },
   });
   assert.equal(result.kind, 'brew');
-  assert.deepEqual(result.cmd, ['brew', 'install', 'lean-ctx']);
+  assert.deepEqual(result.cmd, ['brew', 'install', 'yvgude/lean-ctx/lean-ctx']);
 });
 
 test('lean-ctx detection picks scoop on Windows when present', () => {
