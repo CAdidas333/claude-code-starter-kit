@@ -28,9 +28,23 @@ const KIT_FILES = {
 
   // Skills -> ~/.claude/skills/<name>/SKILL.md
   skills: [
-    'welcome', 'new-project', 'today', 'wrap', 'status-report',
-    'ingest', 'digest', 'investigate', 'scout', 'audit',
-    'morning-brief', 'memory-md-management',
+    'armory-cost',
+    'audit',
+    'audit-internal',
+    'digest',
+    'ingest',
+    'investigate',
+    'memory-md-management',
+    'morning-brief',
+    'new-project',
+    'scout',
+    'speak',
+    'status-report',
+    'today',
+    'uptospeed',
+    'verify',
+    'welcome',
+    'wrap',
   ],
 
   // Agents -> ~/.claude/agents/<name>.md
