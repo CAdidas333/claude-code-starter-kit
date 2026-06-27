@@ -1,7 +1,12 @@
-# Required repository secrets:
-# - GH_TOKEN: a fine-grained GitHub PAT with no scopes (just for gh auth login --with-token).
-#   In repo settings → Secrets and variables → Actions → New repository secret.
-# - ANTHROPIC_API_KEY: (currently unused — placeholder for future claude-auth tests).
+# GitHub Actions: install smoke test on real macOS + Windows runners.
+#
+# Auth: uses the auto-provided GITHUB_TOKEN (no repo secret needed). The gh CLI
+# reads GH_TOKEN from the environment, so the installer's `gh auth status` passes
+# without an interactive `gh auth login`.
+#
+# Claude Code is pre-installed so the prereq check is satisfied and the
+# single-shell PATH self-heal (which needs a fresh shell, disabled here via
+# KIT_SETUP_RELAUNCHED=1) doesn't block the run.
 
 name: Install Smoke Test
 
@@ -14,58 +19,53 @@ on:
 jobs:
   mac:
     runs-on: macos-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
-      - name: Set up gh auth (non-interactive)
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          echo "$GH_TOKEN" | gh auth login --with-token
-          gh auth status
+      - name: Pre-install Claude Code (satisfies prereq check)
+        run: npm install -g @anthropic-ai/claude-code
       - name: Run unit tests
         run: node --test "bin/**/*.test.js"
       - name: Run setup.sh in scratch HOME
         env:
           KIT_SETUP_RELAUNCHED: '1'
-          HOME: /tmp/sk-test-home
+          HOME: ${{ runner.temp }}/sk-test-home
         run: |
-          mkdir -p $HOME
-          ./setup.sh || (cat $HOME/Desktop/starter-kit-broke-*.txt 2>/dev/null; exit 1)
+          mkdir -p "$HOME"
+          ./setup.sh || (cat "$HOME"/Desktop/starter-kit-broke-*.txt 2>/dev/null; exit 1)
       - name: Verify install
         env:
-          HOME: /tmp/sk-test-home
+          HOME: ${{ runner.temp }}/sk-test-home
         run: |
-          ls $HOME/Projects/_brain/ || exit 1
-          test -f $HOME/.claude/settings.json || exit 1
-          # Skip the full /verify check (it needs a real Claude session); instead verify file shape.
-          test -f $HOME/Projects/_brain/Armory/Cheatsheets/System-Manifest.md || exit 1
-          ls $HOME/Projects/_brain/Armory/Notes/ | wc -l
+          test -d "$HOME/Projects/_brain" || exit 1
+          test -f "$HOME/.claude/settings.json" || exit 1
+          test -f "$HOME/Projects/_brain/Armory/Cheatsheets/System-Manifest.md" || exit 1
+          echo "Seed notes installed: $(ls "$HOME/Projects/_brain/Armory/Notes/" | wc -l)"
 
   windows:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
-      - name: Set up gh auth (non-interactive)
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          echo "$env:GH_TOKEN" | gh auth login --with-token
-          gh auth status
+      - name: Pre-install Claude Code (satisfies prereq check)
+        run: npm install -g "@anthropic-ai/claude-code"
       - name: Run unit tests
         run: node --test "bin/**/*.test.js"
       - name: Run setup.ps1 in scratch USERPROFILE
         env:
           KIT_SETUP_RELAUNCHED: '1'
-          USERPROFILE: C:\sk-test-home
-          HOME: C:\sk-test-home
+          USERPROFILE: ${{ runner.temp }}\sk-test-home
+          HOME: ${{ runner.temp }}\sk-test-home
         run: |
           New-Item -ItemType Directory -Force -Path $env:USERPROFILE | Out-Null
           .\setup.ps1
@@ -75,7 +75,7 @@ jobs:
           }
       - name: Verify install
         env:
-          USERPROFILE: C:\sk-test-home
+          USERPROFILE: ${{ runner.temp }}\sk-test-home
         run: |
           if (-not (Test-Path "$env:USERPROFILE\Projects\_brain")) { exit 1 }
           if (-not (Test-Path "$env:USERPROFILE\.claude\settings.json")) { exit 1 }
