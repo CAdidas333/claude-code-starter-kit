@@ -1,5 +1,5 @@
 ---
-updated: 2026-04-10
+updated: 2026-06-27
 tags: [context, master]
 ---
 
@@ -12,30 +12,37 @@ setup designed to take a new user from zero to productive in about
 20 minutes. It bundles:
 
 - A brain/workspace structure (`~/Projects/_brain/`)
-- 12 custom skills (`/new-project`, `/today`, `/wrap`, `/status-report`,
+- 17 custom skills (`/new-project`, `/today`, `/wrap`, `/status-report`,
   `/ingest`, `/digest`, `/investigate`, `/scout`, `/audit`,
-  `/morning-brief`, `/memory-md-management`, `/welcome`)
+  `/morning-brief`, `/memory-md-management`, `/welcome`,
+  `/uptospeed`, `/audit-internal`, `/armory-cost`, `/speak`, `/verify`)
 - 2 background agents (context-updater, brain-updater)
 - 3 hooks (SessionStart Overwatch banner, PreToolUse context guard,
   PostToolUse code reviewer)
-- 2 MCP servers auto-configured (lean-ctx for smart file reading,
-  Armory for the personal knowledge vault)
+- 3 MCP servers auto-configured (lean-ctx for smart file reading,
+  Armory for the personal knowledge vault, Council for second-opinion
+  AI consultations and design image generation — 6 tools; Gemini, GPT,
+  and NVIDIA voices, each null-gated on its API key)
 - A guided `/welcome` onboarding that personalizes itself via an
-  interactive interview inside Claude Code
+  interactive interview inside Claude Code (two tracks: Beginner / Adopter)
 - Cross-platform installers — `setup.sh` (Mac) and `setup.ps1`
   (Windows) — sharing a single Node.js finisher for heavy lifting
-- A documentation set: README, INSTALL, FIRST-SESSION, CHEATSHEET,
-  WORKFLOWS, CLI-REFERENCE, WHAT-IS-THIS, UPDATING
+- A documentation set: README, PRE-INSTALL, INSTALL, FIRST-SESSION,
+  CHEATSHEET, WORKFLOWS, CLI-REFERENCE, WHAT-IS-THIS, UPDATING, plus
+  upgrades/mac-daemons and recipes/cron-loop
 
 ## Current Status
 
-**Design phase complete — implementation plan next.**
+**v2 shipped — branch feat/v2-build.**
 
-The architecture, scope, file tree, `/welcome` skill behavior,
-sanitization rules, and end-to-end user flow were all approved
-through a structured brainstorming session on 2026-04-10. The full
-design doc lives privately (not in this repo). Implementation
-planning begins next, followed by the Phase 1 build.
+v1 shipped April 2026 (design + implementation complete). v2 adds:
+the Council MCP (6 tools, 3 voices), 5 new skills (uptospeed,
+audit-internal, armory-cost, speak, verify), two-track /welcome
+(Beginner / Adopter routing), 7 additional Armory seed notes,
+PRE-INSTALL pre-flight doc, bulletproof unattended install (Desktop
+error report + PATH self-heal), optional Mac daemon templates (9
+launchd plists in templates/launchd/), a cron-loop recipe, and
+GitHub Actions CI (.github/workflows/install.yml).
 
 ## Non-Goals
 
@@ -58,17 +65,22 @@ planning begins next, followed by the Phase 1 build.
    Creates workspace, copies templates/skills/agents/hooks, installs
    MCPs, merges `~/.claude/settings.json`. Idempotent (safe to re-run).
 3. **`/welcome` skill** — interactive onboarding inside Claude Code.
-   Interviews the user, writes profile/working-style/focus files,
-   seeds memory, transitions to first braindump. Three paths:
-   - "I have specific projects in mind"
-   - "I'm exploring, help me think it through"
-   - "I don't know yet, learn as I go" — triggers the self-learning
-     Armory mode
-4. **Documentation** — README, INSTALL, CHEATSHEET, FIRST-SESSION,
-   WORKFLOWS, CLI-REFERENCE, WHAT-IS-THIS, UPDATING. Written for
+   Routes by coding-experience answer. Two tracks:
+   - **Track A (Beginner)** — full identity + focus + working-style
+     interview, seeds memory, transitions to first braindump. Inner
+     three-path projects fork: "I have specific projects in mind" /
+     "I'm exploring, help me think it through" / "I don't know yet,
+     learn as I go" (triggers the self-learning Armory mode).
+   - **Track B (Adopter)** — faster orientation covering what's new
+     vs Claude.ai, a path branch (bring existing project vs build a
+     daily workflow), and concrete next actions. No braindump.
+4. **Documentation** — README, PRE-INSTALL, INSTALL, CHEATSHEET,
+   FIRST-SESSION, WORKFLOWS, CLI-REFERENCE, WHAT-IS-THIS, UPDATING,
+   plus upgrades/mac-daemons and recipes/cron-loop. Written for
    newcomers, no jargon assumptions, generic examples only.
 5. **Content payload** — templates, skills, hooks, MCP server source,
-   three seed Armory notes for day-one demonstration.
+   10 seed Armory notes (3 original v1 + 7 new v2 additions), and a
+   System-Manifest cheatsheet template.
 
 ## How the Self-Learning Armory Works
 
@@ -132,10 +144,41 @@ UI — is in the private design doc.
 5. **Attribution:** maintainer name in LICENSE + README byline only
 6. **Sanitization:** allow-list + banned strings grep + manual review
    + pre-publish review
-7. **`/welcome` paths:** three, including "I don't know yet, learn
-   as I go" — the self-learning mode is a first-class feature, not
-   a fallback
+7. **`/welcome` paths:** three (A/B/C), including "I don't know yet,
+   learn as I go" — the self-learning mode is a first-class feature,
+   not a fallback (these three paths are the inner projects fork,
+   preserved within Track A)
 8. **Seed Armory notes:** ship three generic starter notes (subject
    to pre-publish review)
 9. **Directory name:** `Claude-Code-Starter-Kit`
 10. **Repo:** `CAdidas333/claude-code-starter-kit` (public)
+
+## v2 Additions (2026-06-27)
+
+1. **Council MCP** — 6 tools: `council_consult`, `council_code_review`,
+   `council_save`, `council_status`, `council_design_generate`,
+   `council_design_review`. Gemini, GPT, and NVIDIA voices; each
+   null-gated on its API key (absent key = voice absent, never errors).
+   Config: `~/.claude/council-config.sh`.
+2. **Skills expanded to 17** — added: `uptospeed`, `audit-internal`,
+   `armory-cost`, `speak`, `verify`.
+3. **Two-track `/welcome`** — top-level routing question; Track A
+   (Beginner) + Track B (Adopter). The v1 three-path projects fork is
+   preserved inside Track A.
+4. **Seed Armory notes** — 10 total (3 original + 7 new: rewind-discipline,
+   boris-cherny-claude-md, feature-completion-subtractive-pass,
+   idempotency-keys, adhd-prompts-kit, jsonl-transcript-debugging,
+   recoverable-delete-safety-net).
+5. **PRE-INSTALL.md** — browser-only pre-flight doc (Windows + Mac
+   tracks); read before running setup.
+6. **Bulletproof install** — Desktop diagnostic report
+   (`starter-kit-broke-<ts>.txt`) on unrecoverable failure; PATH
+   self-heal (re-exec in fresh shell when `claude` not on PATH after
+   install); friendly exits don't trigger the report.
+7. **Mac power upgrade** — `docs/upgrades/mac-daemons.md` + 9 opt-in
+   launchd daemon templates in `templates/launchd/`. Run after first
+   session, not during install.
+8. **Cron loop recipe** — `docs/recipes/cron-loop.md` +
+   `templates/cron-loop-starter-routine.json`.
+9. **GitHub Actions CI** — `.github/workflows/install.yml` smoke-tests
+   the installer on real macOS + Windows runners.

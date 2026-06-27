@@ -13,6 +13,39 @@ if (-not $ScriptDir) {
     $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 }
 
+# --- Error-report fallback: write a Desktop diagnostic on unrecoverable failure ---
+# Note: friendly `exit 1` paths (wrong OS, declined prompt, cancelled gh auth,
+# "open a new shell and re-run") deliberately bypass this — in PowerShell `exit`
+# does not trigger the surrounding try/catch, so no scary file is written when the
+# user simply made a choice. Reports fire only for genuine failures: a thrown
+# cmdlet error (ErrorActionPreference=Stop), a winget install failure via
+# Invoke-Native, or a non-zero finisher exit.
+$Script:CurrentStep = "initializing"
+$Script:CurrentCmd  = ""
+
+function Write-ErrorReportAndExit {
+    param([int]$ExitCode = 1, [string]$Stderr = "")
+    Write-Host ""
+    Write-Host "Setup failed at: $Script:CurrentStep" -ForegroundColor Red
+    Write-Host ""
+    $payload = @{
+        step    = $Script:CurrentStep
+        command = $Script:CurrentCmd
+        stderr  = $Stderr
+    } | ConvertTo-Json -Compress
+    try {
+        $reportPath = & node (Join-Path $ScriptDir "bin\lib\error-report.js") --json $payload 2>$null
+    } catch {
+        $reportPath = "(error-report writer also failed)"
+    }
+    Write-Host "Wrote a diagnostic report to:" -ForegroundColor Yellow
+    Write-Host "  $reportPath"
+    Write-Host ""
+    Write-Host "Text or email this file to the kit maintainer along with what you were trying to do."
+    Write-Host "No secrets are in it -- API keys are flagged present/absent only."
+    exit $ExitCode
+}
+
 Write-Host "========================================" -ForegroundColor Blue
 Write-Host "  Claude Code Starter Kit - Setup (Win)" -ForegroundColor Blue
 Write-Host "========================================" -ForegroundColor Blue
@@ -60,15 +93,19 @@ function Invoke-Native {
         [Parameter(Mandatory=$true)][string]$Description,
         [Parameter(Mandatory=$true)][scriptblock]$Block
     )
+    $Script:CurrentCmd = $Description
     & $Block
     if ($LASTEXITCODE -ne 0) {
         Write-Host ""
         Write-Host "$Description failed (exit code $LASTEXITCODE)." -ForegroundColor Red
-        exit 1
+        Write-ErrorReportAndExit -ExitCode $LASTEXITCODE -Stderr "$Description failed (exit code $LASTEXITCODE)"
     }
 }
 
+try {
+
 # --- Step 1: Check prerequisites ---
+$Script:CurrentStep = "prerequisite check"
 Write-Host "Checking prerequisites..." -ForegroundColor Yellow
 
 $Missing = @()
@@ -150,11 +187,24 @@ if ($Missing.Count -gt 0) {
     }
 
     if (-not (Test-Command "claude")) {
+        if ($env:KIT_SETUP_RELAUNCHED -eq "1") {
+            # Already relaunched once in a fresh shell and claude is still invisible.
+            Write-Host ""
+            Write-Host "Claude is still not on PATH after a fresh-shell relaunch." -ForegroundColor Red
+            Write-Host "Close this PowerShell window, open a new one, and re-run setup.ps1."
+            Write-Host "(npm global binaries live in %AppData%\npm, which is added to PATH for new shells.)"
+            Write-ErrorReportAndExit -ExitCode 1 -Stderr "claude not on PATH after PowerShell relaunch"
+        }
         Write-Host ""
-        Write-Host "Claude Code was installed via npm, but 'claude' is not on PATH." -ForegroundColor Red
-        Write-Host "Close this PowerShell window, open a new one, and re-run setup.ps1."
-        Write-Host "(npm global binaries live in %AppData%\npm, which is added to PATH for new shells.)"
-        exit 1
+        Write-Host "Claude was installed but isn't on PATH yet in this shell." -ForegroundColor Yellow
+        Write-Host "Re-launching setup in a fresh PowerShell with refreshed PATH..."
+        Write-Host ""
+        # Spawn a child PowerShell that re-runs this script; the child inherits the
+        # latest registry PATH (incl. %AppData%\npm), so claude becomes visible.
+        $env:KIT_SETUP_RELAUNCHED = "1"
+        $childScript = Join-Path $ScriptDir "setup.ps1"
+        & powershell -NoProfile -ExecutionPolicy Bypass -File $childScript
+        exit $LASTEXITCODE
     }
 }
 
@@ -162,6 +212,8 @@ Write-Host "All prerequisites present." -ForegroundColor Green
 Write-Host ""
 
 # --- Step 2: GitHub auth ---
+$Script:CurrentStep = "github auth"
+$Script:CurrentCmd  = "gh auth login"
 Write-Host "Setting up GitHub access..." -ForegroundColor Yellow
 gh auth status *> $null
 if ($LASTEXITCODE -ne 0) {
@@ -180,11 +232,17 @@ Write-Host "GitHub authenticated." -ForegroundColor Green
 Write-Host ""
 
 # --- Step 3: Hand off to the cross-platform finisher ---
+$Script:CurrentStep = "cross-platform finisher"
+$Script:CurrentCmd  = "node bin\finish-setup.js"
 Write-Host "Running cross-platform finisher..." -ForegroundColor Yellow
 Write-Host ""
 node (Join-Path $ScriptDir "bin\finish-setup.js")
 if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
+    Write-ErrorReportAndExit -ExitCode $LASTEXITCODE -Stderr "finisher exited with code $LASTEXITCODE"
 }
 
 # finish-setup.js prints its own completion message
+
+} catch {
+    Write-ErrorReportAndExit -ExitCode 1 -Stderr $_.Exception.Message
+}

@@ -100,33 +100,31 @@ module.exports = {
       return;
     }
 
-    // Commit. Author/committer come from the user's git config. If the
-    // user has no git config at all, we set a local identity scoped to
-    // this repo so the commit can land — it's better than failing the
-    // finisher, and the user can amend later.
+    // Commit. Author/committer come from the user's git config. If the user
+    // has no git identity configured, set a local one scoped to THIS repo
+    // BEFORE committing — proactively, so the commit lands without an
+    // alarming "commit failed" warning. (A fresh machine often has no global
+    // git identity yet.) The user can amend the author later if they care.
+    const haveName = runGitCapture(['config', 'user.name'], paths.BRAIN);
+    const haveEmail = runGitCapture(['config', 'user.email'], paths.BRAIN);
+    if (!haveName || !haveEmail) {
+      log.step('No git identity found — setting a local one for the brain repo only');
+      if (!haveEmail) runGit(['config', 'user.email', 'brain@localhost'], paths.BRAIN);
+      if (!haveName) runGit(['config', 'user.name', 'Brain Finisher'], paths.BRAIN);
+    }
+
     log.step('git commit');
     try {
       runGit(
-        [
-          'commit',
-          '-m',
-          'Initialize brain - cross-project knowledge hub',
-        ],
+        ['commit', '-m', 'Initialize brain - cross-project knowledge hub'],
         paths.BRAIN
       );
     } catch (err) {
-      log.warn('git commit failed (probably missing user.name/user.email)');
-      log.step('Setting local git identity for this repo only');
-      runGit(['config', 'user.email', 'brain@localhost'], paths.BRAIN);
-      runGit(['config', 'user.name', 'Brain Finisher'], paths.BRAIN);
-      runGit(
-        [
-          'commit',
-          '-m',
-          'Initialize brain - cross-project knowledge hub',
-        ],
-        paths.BRAIN
-      );
+      // Identity is handled above; any failure here is something else
+      // (a hook, a permissions issue). Don't fail the whole finisher over
+      // the brain's first auto-commit — the repo is still initialized.
+      log.warn(`Brain initial commit didn't land: ${err.message.split('\n')[0]}`);
+      log.warn('The brain is still a git repo — you can commit it yourself later.');
     }
 
     if (!fs.existsSync(gitDir)) {

@@ -54,5 +54,67 @@ module.exports = {
     log.ok(
       `Brain templates: ${copied} copied, ${skipped} already present, ${missing} source missing`
     );
+
+    // Armory seed notes -> ~/Projects/_brain/Armory/Notes/
+    // Same no-overwrite invariant: skip if destination already exists.
+    let seedsCopied = 0;
+    let seedsSkipped = 0;
+    let seedsMissing = 0;
+
+    for (const relSrc of KIT_FILES.armorySeeds) {
+      const src = joinUnder(kitRoot, relSrc);
+      const basename = relSrc.split('/').pop();
+      const dst = joinUnder(paths.BRAIN, 'Armory/Notes/' + basename);
+
+      if (!fs.existsSync(src)) {
+        log.warn(`seed source missing, skipping: ${relSrc}`);
+        seedsMissing += 1;
+        continue;
+      }
+
+      if (fs.existsSync(dst)) {
+        seedsSkipped += 1;
+        continue;
+      }
+
+      fs.mkdirSync(parentDir(dst), { recursive: true });
+      fs.copyFileSync(src, dst);
+      seedsCopied += 1;
+    }
+
+    log.ok(
+      `Armory seeds: ${seedsCopied} copied, ${seedsSkipped} already present, ${seedsMissing} source missing`
+    );
+
+    // Armory cheatsheets -> ~/Projects/_brain/Armory/Cheatsheets/
+    // Same no-overwrite invariant: skip if destination already exists.
+    let csCopied = 0;
+    let csSkipped = 0;
+    let csMissing = 0;
+
+    for (const relSrc of KIT_FILES.armoryCheatsheets) {
+      const src = joinUnder(kitRoot, relSrc);
+      const basename = relSrc.split('/').pop();
+      const dst = joinUnder(paths.BRAIN, 'Armory/Cheatsheets/' + basename);
+
+      if (!fs.existsSync(src)) {
+        log.warn(`cheatsheet source missing, skipping: ${relSrc}`);
+        csMissing += 1;
+        continue;
+      }
+
+      if (fs.existsSync(dst)) {
+        csSkipped += 1;
+        continue;
+      }
+
+      fs.mkdirSync(parentDir(dst), { recursive: true });
+      fs.copyFileSync(src, dst);
+      csCopied += 1;
+    }
+
+    log.ok(
+      `Armory cheatsheets: ${csCopied} copied, ${csSkipped} already present, ${csMissing} source missing`
+    );
   },
 };

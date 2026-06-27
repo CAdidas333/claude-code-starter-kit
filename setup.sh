@@ -13,6 +13,29 @@ NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# --- Error-report fallback: write a Desktop diagnostic on unrecoverable failure ---
+CURRENT_STEP="initializing"
+CURRENT_CMD=""
+KIT_FRIENDLY_EXIT=0   # set to 1 before intentional user-choice exits to suppress the report
+
+write_error_report() {
+  local exit_code=$?
+  if [ "$exit_code" -eq 0 ] || [ "$KIT_FRIENDLY_EXIT" -eq 1 ]; then return; fi
+  echo "" >&2
+  echo -e "${RED}Setup failed at: ${CURRENT_STEP}${NC}" >&2
+  echo "" >&2
+  local payload
+  payload=$(printf '{"step":"%s","command":"%s","stderr":"setup.sh exited with code %d"}' "$CURRENT_STEP" "$CURRENT_CMD" "$exit_code")
+  local report_path
+  report_path=$(node "${SCRIPT_DIR}/bin/lib/error-report.js" --json "$payload" 2>/dev/null) || report_path="(error-report writer also failed)"
+  echo "Wrote a diagnostic report to:" >&2
+  echo "  ${report_path}" >&2
+  echo "" >&2
+  echo "Text or email this file to the kit maintainer along with what you were trying to do." >&2
+  echo "No secrets are in it -- API keys are flagged present/absent only." >&2
+}
+trap write_error_report EXIT
+
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}  Claude Code Starter Kit — Setup (Mac)${NC}"
 echo -e "${BLUE}========================================${NC}"
@@ -21,10 +44,11 @@ echo ""
 # Check if we're on macOS
 if [[ "$(uname)" != "Darwin" ]]; then
   echo -e "${RED}This script is for macOS. Windows users: run setup.ps1 instead.${NC}"
-  exit 1
+  KIT_FRIENDLY_EXIT=1; exit 1
 fi
 
 # --- Step 1: Check / install prerequisites ---
+CURRENT_STEP="prerequisite check"; CURRENT_CMD="brew/git/node/gh/claude availability + install"
 echo -e "${YELLOW}Checking prerequisites...${NC}"
 
 MISSING=()
@@ -66,7 +90,7 @@ if [ "${#MISSING[@]}" -gt 0 ]; then
   echo ""
   if [[ ! "$REPLY" =~ ^[Yy]?$ ]]; then
     echo "Cancelled. Install prerequisites manually and re-run."
-    exit 1
+    KIT_FRIENDLY_EXIT=1; exit 1
   fi
 
   # Install Homebrew if missing.
@@ -79,8 +103,9 @@ if [ "${#MISSING[@]}" -gt 0 ]; then
   if [[ " ${MISSING[*]} " == *" Homebrew "* ]]; then
     BREW_INSTALLER_URL="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
     BREW_INSTALLER_TMP="$(mktemp -t brew-install.XXXXXX)"
-    trap 'rm -f "$BREW_INSTALLER_TMP"' EXIT
+    CURRENT_STEP="homebrew install"; CURRENT_CMD="download + run brew installer"
     if ! curl -fsSL "$BREW_INSTALLER_URL" -o "$BREW_INSTALLER_TMP"; then
+      rm -f "$BREW_INSTALLER_TMP"
       echo -e "${RED}Failed to download Homebrew installer from ${BREW_INSTALLER_URL}${NC}"
       echo "Check your internet connection or install Homebrew manually from https://brew.sh"
       exit 1
@@ -91,7 +116,6 @@ if [ "${#MISSING[@]}" -gt 0 ]; then
     echo ""
     /bin/bash "$BREW_INSTALLER_TMP"
     rm -f "$BREW_INSTALLER_TMP"
-    trap - EXIT
   fi
 
   # Refresh PATH for this script (Apple Silicon or Intel layout)
@@ -121,10 +145,28 @@ if [ "${#MISSING[@]}" -gt 0 ]; then
   fi
 fi
 
+# PATH self-heal: if an install just changed PATH and claude still isn't visible
+# in this shell, re-exec in a fresh login shell so the rest of setup sees it.
+# Guarded against infinite relaunch by KIT_SETUP_RELAUNCHED.
+if ! command -v claude >/dev/null 2>&1; then
+  if [ "${KIT_SETUP_RELAUNCHED:-0}" = "1" ]; then
+    CURRENT_STEP="path self-heal"; CURRENT_CMD="re-exec fresh login shell"
+    echo -e "${RED}claude is still not on PATH after a fresh-shell relaunch.${NC}" >&2
+    echo "Close this terminal, open a new one, and re-run ./setup.sh." >&2
+    exit 1
+  fi
+  echo ""
+  echo "Re-launching setup in a fresh shell with refreshed PATH..."
+  echo ""
+  export KIT_SETUP_RELAUNCHED=1
+  exec "$SHELL" -l -c "\"$SCRIPT_DIR/setup.sh\""
+fi
+
 echo -e "${GREEN}All prerequisites present.${NC}"
 echo ""
 
 # --- Step 2: GitHub auth (interactive) ---
+CURRENT_STEP="github auth"; CURRENT_CMD="gh auth login"
 echo -e "${YELLOW}Setting up GitHub access...${NC}"
 if ! gh auth status >/dev/null 2>&1; then
   echo "You'll be asked to authenticate with GitHub."
@@ -141,13 +183,14 @@ if ! gh auth status >/dev/null 2>&1; then
   if [ "$gh_rc" -ne 0 ]; then
     echo -e "${RED}GitHub authentication was cancelled or failed.${NC}"
     echo "Re-run ./setup.sh when you're ready to authenticate."
-    exit 1
+    KIT_FRIENDLY_EXIT=1; exit 1
   fi
 fi
 echo -e "${GREEN}GitHub authenticated.${NC}"
 echo ""
 
 # --- Step 3: Hand off to the cross-platform finisher ---
+CURRENT_STEP="cross-platform finisher"; CURRENT_CMD="node bin/finish-setup.js"
 echo -e "${YELLOW}Running cross-platform finisher...${NC}"
 echo ""
 node "${SCRIPT_DIR}/bin/finish-setup.js"

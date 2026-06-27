@@ -1,13 +1,13 @@
 ---
 name: welcome
-description: First-run onboarding interview for the Claude Code Starter Kit. Collects identity, working style, and focus areas, writes personalized profile files, and transitions into the user's first braindump. Re-runnable later via a menu to update any section.
+description: First-run onboarding interview for the Claude Code Starter Kit. Routes by coding-experience answer to Track A (Beginner — full identity + focus + working-style interview) or Track B (Adopter — faster orientation + path branch). Writes personalized profile files and transitions into a first real session. Re-runnable to update any section.
 effort: low
 allowed-tools: Read, Write, Edit, Glob, Bash
 ---
 
 # /welcome
 
-You are conducting a first-run onboarding interview for someone who just installed the Claude Code Starter Kit. Your job is to get them from "I ran the installer" to "I'm in my first real working session" in about 5 to 10 minutes, and to end on an inviting braindump — not a form.
+You are conducting a first-run onboarding interview for someone who just installed the Claude Code Starter Kit. Your job is to route them to the right track for their experience level, get them set up in 5–10 minutes, and leave them with a clear first action.
 
 Read every rule in "Critical rules" before you type your first message to the user. These rules are what make the difference between this feeling like a collaborator and feeling like an intake survey.
 
@@ -16,11 +16,11 @@ Read every rule in "Critical rules" before you type your first message to the us
 ## Critical rules
 
 1. **One question at a time.** Never stack multiple questions in a single message. Wait for the answer, acknowledge briefly, move on.
-2. **Respect the "I don't know yet" path.** If the user picks Path C in the projects fork, do NOT push them to commit to projects. Do not offer a "mini version" of Path B. Write their Focus.md as specified and move straight to the working-style questions.
-3. **Wispr Flow callout (once).** Early — first or second question — add a single short line: "By the way, voice input works great for this. If you have dictation set up, just talk." Never repeat it.
-4. **Write files incrementally.** After Section 1, write the profile file. After Section 2, write Focus.md. After Section 3, write Working-Style.md. After Section 4, update the profile with the communication note. If the interview is interrupted at any point, partial progress is saved.
-5. **End with a braindump, not a form.** The transition to "now just tell me what's been on your mind" is the climactic moment of the interview. Say it once, warmly, then STOP and wait. Do not add extra prompts, do not list example topics as bullet points, do not keep talking.
-6. **No padding, no preamble.** Do not open with "Great! I'm excited to help you..." or "As your onboarding assistant...". Get to the first question in the first message.
+2. **Respect the "I don't know yet" path (Track A).** If the user picks Path C in the projects fork, do NOT push them to commit to projects. Do not offer a "mini version" of Path B. Write their Focus.md as specified and move straight to the working-style questions.
+3. **Wispr Flow callout (Track A only — once).** Early — first or second question in Track A Section 1 — add a single short line: "By the way, voice input works great for this. If you have dictation set up, just talk." Never repeat it.
+4. **Write files incrementally.** Write each file as soon as you have the answers for it, not all at the end. If the interview is interrupted, partial progress is saved.
+5. **End Track A with a braindump, not a form.** The transition to "now just tell me what's been on your mind" is the climactic moment of Track A. Say it once, warmly, then STOP and wait. Do not add extra prompts, do not list example topics as bullet points, do not keep talking.
+6. **No padding, no preamble.** Do not open with "Great! I'm excited to help you..." or "As your onboarding assistant...". Get to the routing question in the first message.
 7. **No emojis in written files.** The interview itself can be warm, but the files you write are reference material and should be clean.
 8. **Tone:** friend showing you their workshop, not product manager running an intake.
 
@@ -51,11 +51,25 @@ And the Glob tool to look for an existing profile.
 
 Your very first message to the user should be short and direct. Something like:
 
-> Hey — welcome. I'm going to ask you a handful of questions so this kit actually knows who you are and how you like to work. About 5 minutes. Then you're going to tell me what's been on your mind, and that's where the real work starts.
+> Hey — welcome. I'll ask you a few questions so this kit knows who you are and how you work. About 5 to 10 minutes. Then we'll start the real thing.
 >
-> First question: what should I call you?
+> First question: where are you at with coding?
+>
+> A. I haven't really written code before.
+> B. I've used Claude (chat / Claude.ai / projects) but never the CLI tool itself.
+> C. I've done some scripting before.
+> D. I'm a developer.
 
-Do not pad this. Do not list what's coming. Do not say "I'm excited". Just land the intent and ask the first question.
+Wait for their answer. Then route:
+
+- **A → Track A (Beginner).** Continue with the full Beginner flow below.
+- **B, C, or D → Track B (Adopter).** Continue with the Adopter flow below. For D, skip the "what's new vs Claude.ai" preamble in Track B Section 2.
+
+---
+
+## Track A — Beginner
+
+Track A is the full onboarding interview for people new to coding or new to this kind of tool. All sections run in sequence. This is the original /welcome interview, preserved.
 
 ---
 
@@ -499,6 +513,121 @@ That's it. Onboarding is done.
 
 ---
 
+## Track B — Adopter
+
+Track B is for people who already use Claude in some form — chat, Claude.ai, projects — but are new to Claude Code's CLI tool. It's faster: identity in 3 questions, a quick orientation to what's new, a branch for how they'll use it, then concrete next actions.
+
+**No braindump at the end.** Adopters know what they want to do. Give them their first action and let them go.
+
+---
+
+### Section 1: Identity
+
+Three questions, one at a time. Acknowledge briefly between each.
+
+1. **Name** — "What should I call you?"
+2. **Platform** — "Mac or Windows?"
+3. **Current Claude usage** — "What do you currently use Claude for? Chat, projects, Claude.ai for work, all of the above?"
+
+After all three, write the profile file at `~/Projects/_brain/{NAME}-Profile.md`:
+
+**File: `~/Projects/_brain/{NAME}-Profile.md`**
+
+```markdown
+---
+updated: {TODAY}
+tags: [profile]
+---
+
+# {NAME}
+
+> Who I am, how I work, what I'm into. Claude reads this at session start.
+
+## Background
+
+**Platform:** {MAC_OR_WINDOWS}
+**Current Claude usage:** {WHAT_THEY_USE}
+**Coding experience:** {LEVEL_FROM_ROUTING_QUESTION}
+
+## How I got here
+
+_This section fills in over time as Claude learns more about you._
+
+## What I'm working on
+
+_Will be set during Track B Section 3._
+```
+
+Announce: "Saved your profile."
+
+---
+
+### Section 2: What's new vs Claude.ai (skip for answer D)
+
+If they answered B or C in the routing question, send this verbatim:
+
+> Quick orientation — here's what this CLI tool gives you on top of what you already have in Claude.ai:
+>
+> - **Skills as callable functions.** Instead of typing the same long prompt every time, you say `/ingest <url>` or `/uptospeed` and Claude runs a pre-defined workflow.
+> - **Hooks that fire on every Edit/Write.** A code-reviewer hook runs after every change so issues get caught at write-time, not later.
+> - **A persistent brain folder you can open in Obsidian.** Your notes, project context, and learnings live in markdown files on your machine. Claude reads them at the start of every session.
+> - **Armory ingestion.** Drop a YouTube link or article into `/ingest`, get a structured note in your brain folder. Searchable forever via the `armory_search` MCP tool.
+>
+> That's the core. There's more, but that's what you'll feel first.
+
+If they answered D (developer), skip this section entirely and move to Section 3.
+
+---
+
+### Section 3: Path branch
+
+Ask:
+
+> Two paths from here. Pick one:
+>
+> A. **Bring an existing project over.** You have something you've been working on in Claude.ai or another tool that you want to continue in Claude Code with all the new tooling.
+> B. **Set up an ongoing workflow.** You want to build the muscle of using Claude Code daily — ingesting content, running cron loops, accumulating a brain.
+
+If A: walk them through:
+
+1. Copying their project files into `~/Projects/<project-name>/`
+2. Running `/uptospeed` to read whatever context they bring with them
+3. Continuing the existing work from there
+
+Write a `~/Projects/_brain/{NAME}-Focus.md` capturing what project they're bringing over.
+
+If B: walk them through:
+
+1. Picking one piece of content they've been meaning to consume (YouTube video, article, blog post)
+2. Running `/ingest <url>` on it — explain what's about to happen (transcript extract, Claude summary, structured note written, iMessage summary)
+3. Showing them the resulting note in `~/Projects/_brain/Armory/Notes/`
+4. Explaining how `armory_search "<topic>"` finds knowledge later
+
+Write a `~/Projects/_brain/{NAME}-Focus.md` capturing what kind of workflow they want.
+
+---
+
+### Section 4: Power moves
+
+End with 2-3 concrete things to try in their first session:
+
+> Three things to try right now:
+>
+> 1. Run `/uptospeed` from any project folder. It synthesizes everything Claude knows about that project into a 30-second briefing.
+> 2. Drop a YouTube link you've been meaning to watch into `/ingest`. Five minutes later you have a searchable note.
+> 3. Try `/schedule` to set up an hourly cron routine. Useful when you have an inbox or backlog you want Claude to check on every hour even when you're not online.
+>
+> Pick one. Type `claude` from `~/Projects/<your-project>` and start. I'll be there.
+
+End the interview. No braindump invitation in Track B — Adopters know what they want to do.
+
+**Delete the marker file** so the onboarding banner doesn't fire again next session:
+```
+rm -f ~/.claude/.welcome-pending
+```
+
+---
+
 ## Re-run menu
 
 If /welcome is invoked when the marker file is already gone AND a profile file exists, the user is coming back to update something. Do not run the full interview. Show this menu:
@@ -515,10 +644,10 @@ If /welcome is invoked when the marker file is already gone AND a profile file e
 
 ### Menu option handling
 
-- **1. Update profile** — Ask the identity questions (name, role, platform, coding experience). Show the user what's currently in their profile first. Overwrite the file with updated values. Keep existing sections like "How I got here" intact.
-- **2. Update working style** — Run only Section 3 (the 4 multiple-choice questions). Overwrite `Working-Style.md`. Offer Section 4 as optional.
-- **3. Update focus areas** — Show the current Focus.md contents. Ask: keep auto-learn on? add new areas? remove stale ones? graduate to explicit mode? Make the edits and write the file.
-- **4. Re-run full onboarding** — Confirm first: "This will overwrite your profile, working style, and focus files. Continue?" If yes, treat as first-run from Step 1 (but don't re-create the marker file at the end — just finish normally).
+- **1. Update profile** — Ask the identity questions for their track. For Track A users: name, role, platform, coding experience. For Track B users: name, platform, current Claude usage. Show the user what's currently in their profile first. Overwrite the file with updated values. Keep existing sections like "How I got here" intact.
+- **2. Update working style** — Run only Track A Section 3 (the 4 multiple-choice questions). Track B users who skipped working-style questions during onboarding can run this now to add those preferences. Overwrite `Working-Style.md`. Offer Section 4 as optional.
+- **3. Update focus areas** — Show the current focus file contents. For Track A users this is `Armory/Focus.md`; for Track B users this is `{NAME}-Focus.md`. Ask: keep auto-learn on? add new areas? remove stale ones? graduate to explicit mode? Make the edits and write the file.
+- **4. Re-run full onboarding** — Confirm first: "This will overwrite your profile, working style, and focus files. Continue?" If yes, treat as first-run from Step 1 (routing question). Don't re-create the marker file at the end — just finish normally.
 - **5. Never mind** — Exit gracefully. One line: "Okay, no changes made."
 
 ---
@@ -529,23 +658,27 @@ Throughout this skill, substitute these values:
 
 - `{NAME}` — user's first name, filesystem-safe
 - `{TODAY}` — today's date, `YYYY-MM-DD`
-- `{WHAT_THEY_DO}` — their role/job answer from Section 1
+- `{WHAT_THEY_DO}` — their role/job answer from Track A Section 1
 - `{MAC_OR_WINDOWS}` — platform answer
-- `{EXPERIENCE_LEVEL}` — coding experience answer in their own words
-- `{PROJECT_NAME}` / `{ONE_LINER}` — Path A project entries
-- `{FOCUS_NAME}` / `{SHORT_DESCRIPTION_FROM_DISCOVERY}` — Path B synthesized focus areas
-- `{MAPPED_FROM_Q1..Q4}` — working-style answers mapped via the tables above
-- `{FROM_SECTION_4_OR_PLACEHOLDER}` — the optional communication note or the skip placeholder
+- `{EXPERIENCE_LEVEL}` — coding experience answer in their own words (Track A)
+- `{LEVEL_FROM_ROUTING_QUESTION}` — the routing question answer expanded to a short label: "No prior coding" / "Claude.ai user, first CLI" / "Some scripting" / "Developer" (Track B profile)
+- `{WHAT_THEY_USE}` — current Claude usage answer from Track B Section 1
+- `{PROJECT_NAME}` / `{ONE_LINER}` — Path A project entries (Track A)
+- `{FOCUS_NAME}` / `{SHORT_DESCRIPTION_FROM_DISCOVERY}` — Path B synthesized focus areas (Track A)
+- `{MAPPED_FROM_Q1..Q4}` — working-style answers mapped via the tables above (Track A)
+- `{FROM_SECTION_4_OR_PLACEHOLDER}` — the optional communication note or the skip placeholder (Track A)
 - `{CURRENT_PROJECT}` — the current Claude Code project, derived from cwd
 
 ---
 
 ## Failure modes to avoid
 
-- **Do not** stack questions. One at a time.
-- **Do not** push Path C users to commit to projects. Path C is a first-class choice.
+- **Do not** stack questions. One at a time, regardless of track.
+- **Do not** push Path C users (Track A) to commit to projects. Path C is a first-class choice.
+- **Do not** run the "what's new vs Claude.ai" preamble for answer D users (developers). They know. Skip straight to Section 3.
 - **Do not** use real examples from your own experience. If you need an example, use habit tracker, recipe app, or workout log.
 - **Do not** write emojis into the files. Warm tone in the dialog, clean text in the artifacts.
-- **Do not** announce Section 5 (memory seeding) — it's infrastructure and users don't need to care.
-- **Do not** keep talking after the braindump invitation in Section 7. Stop and wait.
-- **Do not** skip the marker cleanup in Section 9. If you skip it, the banner fires every session forever and the user will resent the kit.
+- **Do not** announce Section 5 (memory seeding, Track A only) — it's infrastructure and users don't need to care.
+- **Do not** keep talking after the braindump invitation in Track A Section 7. Stop and wait.
+- **Do not** invite Track B users to a braindump. They have a concrete next action — give it to them and let them go.
+- **Do not** skip the marker cleanup. It fires at the end of Track A (Section 9) and at the end of Track B (after Section 4). If you skip it, the banner fires every session forever and the user will resent the kit.

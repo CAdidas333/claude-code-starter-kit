@@ -1,0 +1,82 @@
+# GitHub Actions: install smoke test on real macOS + Windows runners.
+#
+# Auth: uses the auto-provided GITHUB_TOKEN (no repo secret needed). The gh CLI
+# reads GH_TOKEN from the environment, so the installer's `gh auth status` passes
+# without an interactive `gh auth login`.
+#
+# Claude Code is pre-installed so the prereq check is satisfied and the
+# single-shell PATH self-heal (which needs a fresh shell, disabled here via
+# KIT_SETUP_RELAUNCHED=1) doesn't block the run.
+
+name: Install Smoke Test
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Pre-install Claude Code (satisfies prereq check)
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Run unit tests
+        run: node --test "bin/**/*.test.js"
+      - name: Run setup.sh in scratch HOME
+        env:
+          KIT_SETUP_RELAUNCHED: '1'
+          HOME: ${{ runner.temp }}/sk-test-home
+        run: |
+          mkdir -p "$HOME"
+          ./setup.sh || (cat "$HOME"/Desktop/starter-kit-broke-*.txt 2>/dev/null; exit 1)
+      - name: Verify install
+        env:
+          HOME: ${{ runner.temp }}/sk-test-home
+        run: |
+          test -d "$HOME/Projects/_brain" || exit 1
+          test -f "$HOME/.claude/settings.json" || exit 1
+          test -f "$HOME/Projects/_brain/Armory/Cheatsheets/System-Manifest.md" || exit 1
+          echo "Seed notes installed: $(ls "$HOME/Projects/_brain/Armory/Notes/" | wc -l)"
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Pre-install Claude Code (satisfies prereq check)
+        run: npm install -g "@anthropic-ai/claude-code"
+      - name: Run unit tests
+        run: node --test "bin/**/*.test.js"
+      - name: Run setup.ps1 in scratch USERPROFILE
+        env:
+          KIT_SETUP_RELAUNCHED: '1'
+          USERPROFILE: ${{ runner.temp }}\sk-test-home
+          HOME: ${{ runner.temp }}\sk-test-home
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:USERPROFILE | Out-Null
+          .\setup.ps1
+          if ($LASTEXITCODE -ne 0) {
+            Get-Content -Path "$env:USERPROFILE\Desktop\starter-kit-broke-*.txt" -ErrorAction SilentlyContinue
+            exit 1
+          }
+      - name: Verify install
+        env:
+          USERPROFILE: ${{ runner.temp }}\sk-test-home
+        run: |
+          if (-not (Test-Path "$env:USERPROFILE\Projects\_brain")) { exit 1 }
+          if (-not (Test-Path "$env:USERPROFILE\.claude\settings.json")) { exit 1 }
+          if (-not (Test-Path "$env:USERPROFILE\Projects\_brain\Armory\Cheatsheets\System-Manifest.md")) { exit 1 }

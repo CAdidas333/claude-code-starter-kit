@@ -10,9 +10,7 @@ from zero to productive in about 20 minutes.
 
 ## Status
 
-**Design phase.** No kit content has been built yet. The approved
-design lives in a private file outside this repo. See the docs/context/
-files for the current state of work.
+**v2 build.** v1 shipped on `main`; v2 is under construction on `feat/v2-build`. The v2 design lives at `docs/superpowers/specs/2026-06-26-starter-kit-v2-design.md` and the implementation plan at `docs/superpowers/plans/2026-06-26-starter-kit-v2.md`. See the `docs/context/` files for current task state.
 
 - `docs/context/MASTER_CONTEXT.md` — what this project is
 - `docs/context/ACTIVE_PROJECTS.md` — active work within the kit

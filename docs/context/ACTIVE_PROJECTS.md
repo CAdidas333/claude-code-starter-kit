@@ -3,6 +3,17 @@ updated: 2026-04-10
 tags: [active, context]
 ---
 
+## Current Phase: v2 Build
+
+**Priority:** HIGH
+**Status:** Active
+
+### Goal
+Bulletproof unattended Windows install + 3 months of new skills, MCPs, seeds, and patterns. Target: usable by a non-coder on Windows without the maintainer present.
+
+### Active tasks
+See `docs/superpowers/plans/2026-06-26-starter-kit-v2.md` for the full task list.
+
 # Active Projects
 
 Tracks active work **within the Claude Code Starter Kit project itself**.

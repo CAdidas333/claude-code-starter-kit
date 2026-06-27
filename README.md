@@ -4,7 +4,7 @@
 > setup. Here's the kit.
 
 One command. Twenty minutes. Zero to a humming Claude Code workspace
-with skills, hooks, a cross-project brain, two MCP servers, and a
+with skills, hooks, a cross-project brain, three MCP servers, and a
 guided onboarding that interviews you and personalizes itself to how
 you work.
 
@@ -13,12 +13,14 @@ you work.
 ## What this is
 
 A complete, opinionated Claude Code setup packaged as a single install.
-It ships 12 custom skills, 2 agents, 3 hooks, a brain structure you
-can open in Obsidian, and two MCP servers (lean-ctx for smart file
-reading and Armory for your personal knowledge vault). The installer
-lays everything down, and then a `/welcome` skill runs inside Claude
-Code, asks you a handful of questions, writes your profile files, and
-drops you straight into your first real working session.
+It ships 17 custom skills, 2 agents, 3 hooks, a brain structure you
+can open in Obsidian, and three MCP servers (lean-ctx for smart file
+reading, Armory for your personal knowledge vault, and Council for
+second-opinion AI consultations and design image generation). The
+installer lays everything down, and then a `/welcome` skill runs inside
+Claude Code, routes you by experience level, asks you a handful of
+questions, writes your profile files, and drops you straight into your
+first real working session.
 
 It's the setup I use every day to build real software. The kit is the
 workflow, not a tutorial. If you want a gentle introduction to Claude
@@ -55,7 +57,7 @@ Optional but strongly recommended:
 
 - **Wispr Flow** (Mac only, paid) — voice dictation that lets you
   talk to Claude instead of typing. Worth it. The kit works fine
-  without it and there's a free `/voice` skill as a backup.
+  without it — just type your prompts if you'd rather skip voice.
 - **Obsidian** — free, cross-platform. Points at your brain folder
   and gives you graph view, search, and backlinks over everything
   the kit captures.
@@ -65,6 +67,13 @@ Optional but strongly recommended:
 
 Full install notes for each of these live in
 [INSTALL.md](docs/INSTALL.md).
+
+## Before you start
+
+If you want to move fast, read [PRE-INSTALL.md](docs/PRE-INSTALL.md)
+first — it's a browser-only checklist (accounts, tools, 15 minutes)
+that ensures the installer has nothing to wait on. Not required, but
+it makes the install smoother.
 
 ## Quick start
 
@@ -96,20 +105,26 @@ and a troubleshooting FAQ.
   the GitHub CLI, Claude Code itself)
 - Runs `gh auth login` so you're authenticated to GitHub
 - Creates `~/Projects/_brain/` and lays down the full brain scaffold
-- Copies 12 skills to `~/.claude/skills/`
+- Copies 17 skills to `~/.claude/skills/`
 - Copies 2 agents to `~/.claude/agents/`
 - Copies 3 hooks to `~/.claude/hooks/` (and makes them executable)
 - Merges `~/.claude/settings.json` — your existing settings are
   preserved, kit additions are layered on top
-- Installs the **lean-ctx** MCP server via npm
+- Installs the **lean-ctx** MCP server (Homebrew on Mac,
+  winget/Scoop on Windows)
 - Installs the **Armory** MCP server from the vendored copy bundled
   with this repo
-- Writes `~/.mcp.json` to wire both servers into Claude
+- Installs the **Council** MCP server — 6 tools for second-opinion
+  AI consultation and design image generation (Gemini/GPT/NVIDIA;
+  dormant until you add API keys to `~/.claude/council-config.sh`)
+- Writes `~/.mcp.json` to wire all three servers into Claude
 - Initializes git on your brain folder so your notes are versioned
   from day one
 - Writes a `.welcome-pending` marker so your first Claude session
   triggers the `/welcome` onboarding automatically
-- Verifies the install and prints a summary
+- Runs `/verify` (5-check smoke test: MCPs respond, hooks fire, brain
+  folder exists, GitHub auth, settings.json merged) and prints
+  PASS/FAIL per check
 
 The installer is **idempotent**. Running it twice won't break
 anything. If it fails halfway through, just run it again — it picks
@@ -143,6 +158,7 @@ Mode works, how to manage context — see
 
 | Doc | What it's for |
 |---|---|
+| [PRE-INSTALL.md](docs/PRE-INSTALL.md) | Browser-only pre-flight checklist (read before running setup) |
 | [INSTALL.md](docs/INSTALL.md) | Full install walkthrough and troubleshooting |
 | [FIRST-SESSION.md](docs/FIRST-SESSION.md) | What to expect on your first session |
 | [CHEATSHEET.md](docs/CHEATSHEET.md) | Printable quick reference card |
@@ -150,6 +166,8 @@ Mode works, how to manage context — see
 | [CLI-REFERENCE.md](docs/CLI-REFERENCE.md) | Launch flags and built-in commands |
 | [WHAT-IS-THIS.md](docs/WHAT-IS-THIS.md) | Jargon-free glossary for newcomers |
 | [UPDATING.md](docs/UPDATING.md) | How to pull kit updates |
+| [upgrades/mac-daemons.md](docs/upgrades/mac-daemons.md) | Optional Mac power-user daemon setup (post-install) |
+| [recipes/cron-loop.md](docs/recipes/cron-loop.md) | How to schedule a recurring cloud agent |
 
 ## Updating
 
