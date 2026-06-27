@@ -77,8 +77,8 @@ to `~/.config/claude/` (Mac) or `%APPDATA%\claude\` (Windows).
 
 **Heads up on rate limits:** each tier has a usage budget. If you
 slam Claude with huge context or run dozens of parallel sessions,
-you can hit the limit. The kit's `/fast` command and lean-ctx MCP
-both help keep usage efficient. See
+you can hit the limit. The lean-ctx MCP keeps usage efficient by
+compressing reads and caching context. See
 [WORKFLOWS.md](WORKFLOWS.md#context-management) for the 40% rule
 that will save you the most.
 
@@ -108,10 +108,9 @@ itself back in a single week of serious use.
    release.
 
 **The kit works perfectly without Wispr.** If you don't want to pay
-for it, or you're on Windows, or you just hate voice input, use the
-free `/voice` skill instead — it gives you hold-to-record inside a
-Claude session as a lightweight alternative. See the
-[CLI-REFERENCE.md](CLI-REFERENCE.md) entry for `/voice`.
+for it, or you're on Windows, or you just hate voice input, just type
+your prompts. Claude Code is designed for both typists and voice
+users and works great either way.
 
 **Setup tips:**
 
@@ -225,7 +224,7 @@ cd claude-code-starter-kit
    Sign in to GitHub, authorize the CLI, come back to the terminal.
 5. The script hands off to the Node finisher (`bin/finish-setup.js`),
    which creates `~/Projects/_brain/`, copies skills, agents, and
-   hooks into `~/.claude/`, and installs the two MCP servers.
+   hooks into `~/.claude/`, and installs the three MCP servers.
 6. When it's done you'll see a green summary block and instructions
    to start your first Claude session.
 
@@ -358,8 +357,16 @@ the kit works, you just don't have that MCP. To retry manually:
 
 **lean-ctx:**
 
+Mac:
 ```bash
-npm install -g @lean-ctx/mcp
+brew install lean-ctx
+```
+
+Windows (pick one):
+```powershell
+scoop install lean-ctx
+# or
+winget install --id lean-ctx.lean-ctx -e
 ```
 
 **Armory (from the kit's vendored copy):**
@@ -370,8 +377,44 @@ npm install
 npm run build
 ```
 
-Then check `~/.mcp.json` has both servers listed under `mcpServers`.
-If they're missing, re-run the kit's finisher.
+**Council (from the kit's vendored copy):**
+
+```bash
+cd ~/Projects/Claude-Code-Starter-Kit/mcp-servers/council
+npm install
+npm run build
+```
+
+Council is dormant without API keys — it installs but every
+consultation returns an error until you create
+`~/.claude/council-config.sh` with at least one of:
+
+```bash
+export COUNCIL_GOOGLE_API_KEY="your-key-here"
+export COUNCIL_OPENAI_API_KEY="your-key-here"
+export COUNCIL_NVIDIA_API_KEY="your-key-here"
+```
+
+Each voice is independently null-gated: keys you don't provide are
+simply absent, not errors.
+
+Then check `~/.mcp.json` has all three servers listed under `mcpServers`.
+If any are missing, re-run the kit's finisher with `node bin/finish-setup.js`
+from the kit directory.
+
+### The installer wrote a file to my Desktop
+
+If the installer hit an unrecoverable error, it writes a diagnostic
+file called `starter-kit-broke-<timestamp>.txt` to your Desktop. This
+file contains system information that helps diagnose what went wrong —
+no API keys or secrets, only present/absent flags.
+
+Send this file when opening an issue at
+[github.com/CAdidas333/claude-code-starter-kit/issues](https://github.com/CAdidas333/claude-code-starter-kit/issues)
+so the problem can be reproduced quickly.
+
+If the install ultimately succeeded (you see the green summary and
+Claude Code starts), the Desktop file is harmless — you can delete it.
 
 ### I ran the installer twice and now I'm worried
 
